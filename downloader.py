@@ -4,7 +4,6 @@ import re
 
 import requests
 from tqdm import tqdm
-from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips
 
 download_path = "downloaded"
 
@@ -142,26 +141,36 @@ class UFC_API:
                     file.write(chunk)
 
     @staticmethod
-    def _combine_video_audio(temp_video_file_names, temp_audio_file_names, output_file):
-        # Соединение видеофрагментов
-        video_clips = [VideoFileClip(video) for video in temp_video_file_names]
-        final_video = concatenate_videoclips(video_clips)
+    def _combine_video_audio(video_id, rand_int, temp_video_file_names, temp_audio_file_names, output_file):
+        # Соединяем все видео фрагменты в один файл без использования большого количества оперативной памяти
+        combined_video_file = f"downloaded/{video_id}_{rand_int}_combined.ts"
+        with open(combined_video_file, 'wb') as outfile:
+            for video_file in temp_video_file_names:
+                with open(video_file, 'rb') as infile:
+                    outfile.write(infile.read())
 
-        # Соединение аудиофрагментов
-        audio_clips = [AudioFileClip(audio) for audio in temp_audio_file_names]
-        final_audio = concatenate_videoclips(audio_clips)
+        # Соединяем все аудиофрагменты в один файл аналогично
+        combined_audio_file = f"downloaded/{video_id}_{rand_int}_combined.aac"
+        with open(combined_audio_file, 'wb') as outfile:
+            for audio_file in temp_audio_file_names:
+                with open(audio_file, 'rb') as infile:
+                    outfile.write(infile.read())
 
-        # Добавляем аудио к видео
-        final_video = final_video.set_audio(final_audio)
-
-        # Сохранение финального файла
-        final_video.write_videofile(output_file, codec="libx264", audio_codec="aac")
-
-        # Закрываем клипы, чтобы освободить память
-        final_video.close()
-        final_audio.close()
+        # Объединяем видео и аудио в финальный MP4 файл
+        subprocess.run([
+            'ffmpeg', '-y',
+            '-i', combined_video_file,
+            '-i', combined_audio_file,
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-strict', 'experimental',
+            output_file
+        ], check=True)
 
         # Удаляем временные файлы
+        os.remove(combined_video_file)
+        os.remove(combined_audio_file)
+
         for file in temp_video_file_names + temp_audio_file_names:
             os.remove(file)
 
@@ -200,12 +209,6 @@ class UFC_API:
         if not output_path:
             output_path = f"{video_id}.mp4"
 
-        self._combine_video_audio(temp_video_file_names=temp_video_file_names,
+        self._combine_video_audio(video_id=video_id, rand_int=rand_int, temp_video_file_names=temp_video_file_names,
                                   temp_audio_file_names=temp_audio_file_names, output_file=output_path)
         return output_path
-
-if __name__ == '__main__':
-    import secret
-    ufc_api = UFC_API(secret.ufc_auth_key)
-
-    print(ufc_api.download_video("https://ufcfightpass.com/video/..."))
