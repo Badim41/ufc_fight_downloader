@@ -3,7 +3,7 @@
 
 ## Зависимости
 ```bash
-pip install requests moviepy==1.0.3
+pip install requests moviepy==1.0.3 tqdm
 ```
 
 # Использование
