@@ -95,7 +95,7 @@ class UFC_API:
     def _get_media_parts(url, original_url):
         response = requests.get(url)
 
-        print(url, response.text, response.status_code)
+        # print(url, response.text, response.status_code)
 
         parts_urls = [original_url + line for line in response.text.split("\n") if ".ts" in line or ".aac" in line]
 
@@ -108,7 +108,7 @@ class UFC_API:
         original_url = media_master_url[:media_master_url.find("master")]
 
         response = requests.get(media_master_url)
-        print(response.text)
+        # print(response.text)
 
         video_pattern = re.compile(r'video/([^\s"]+)')
         audio_pattern = re.compile(r'audio/([^\s"]+)')
@@ -120,7 +120,7 @@ class UFC_API:
         video_request_id = video_matches[1][video_matches[1].find("video/") + 1:video_matches[1].find("/index")]
         audio_request_id = audio_matches[0][audio_matches[0].find("audio/") + 1:audio_matches[0].find("/index")]
 
-        print("id:", video_request_id, audio_request_id)
+        # print("id:", video_request_id, audio_request_id)
 
         # Формирование полных URL
         video_urls = [original_url + "video/" + video_match for video_match in video_matches]
@@ -208,4 +208,4 @@ if __name__ == '__main__':
     import secret
     ufc_api = UFC_API(secret.ufc_auth_key)
 
-    print(ufc_api.download_video("https://ufcfightpass.com/video/585852"))
+    print(ufc_api.download_video("https://ufcfightpass.com/video/..."))
