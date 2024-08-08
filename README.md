@@ -3,8 +3,9 @@
 
 ## Зависимости
 ```bash
-pip install requests moviepy==1.0.3 tqdm
+pip install requests tqdm
 ```
++ ffmpeg
 
 # Использование
 ```python
