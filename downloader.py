@@ -1,6 +1,7 @@
 import os
 import random
 import re
+import subprocess
 
 import requests
 from tqdm import tqdm
@@ -171,9 +172,6 @@ class UFC_API:
         os.remove(combined_video_file)
         os.remove(combined_audio_file)
 
-        for file in temp_video_file_names + temp_audio_file_names:
-            os.remove(file)
-
     def download_video(self, url, output_path=None):
         if not os.path.exists(download_path):
             os.mkdir(download_path)
@@ -193,15 +191,12 @@ class UFC_API:
 
         rand_int = random.randint(-99999, 99999)
 
-        print("Скачивание видеофрагментов:")
-        for i, video_part_url in enumerate(tqdm(video_parts_url, desc="Видео", unit="part")):
+        for i, video_part_url in enumerate(tqdm(video_parts_url, desc="Скачивание видеофрагментов:", unit="part")):
             video_path = f"{download_path}/{video_id}_{rand_int}_{i}.ts"
             self._download_content(url=video_part_url, output_file=video_path)
             temp_video_file_names.append(video_path)
 
-        # Скачать аудиофрагменты с отображением прогресса
-        print("Скачивание аудиофрагментов:")
-        for i, audio_part_url in enumerate(tqdm(audio_parts_url, desc="Аудио", unit="part")):
+        for i, audio_part_url in enumerate(tqdm(audio_parts_url, desc="Скачивание аудиофрагментов:", unit="part")):
             audio_path = f"{download_path}/{video_id}_{rand_int}_{i}.aac"
             self._download_content(url=audio_part_url, output_file=audio_path)
             temp_audio_file_names.append(audio_path)
@@ -211,4 +206,8 @@ class UFC_API:
 
         self._combine_video_audio(video_id=video_id, rand_int=rand_int, temp_video_file_names=temp_video_file_names,
                                   temp_audio_file_names=temp_audio_file_names, output_file=output_path)
+
+        for file in temp_video_file_names + temp_audio_file_names:
+            os.remove(file)
+
         return output_path
