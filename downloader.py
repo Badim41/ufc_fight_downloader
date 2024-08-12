@@ -34,6 +34,27 @@ class UFC_API:
             print('API_KEY не найден')
 
     def _get_auth_key(self):
+        url = "https://dce-frontoffice.imggaming.com/api/v2/realm-settings/domain/ufcfightpass.com"
+
+        payload = ""
+        headers = {
+            "Realm": "dce.ufc",
+            "x-app-var": "6.7.1.cdc7704",
+            "Accept-Language": "ru-RU",
+            "sec-ch-ua-mobile": "?0",
+            "Authorization": f"Bearer {self.mixed_auth_token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 YaBrowser/24.7.0.0 Safari/537.36",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "Referer": "https://ufcfightpass.com/",
+            "app": "dice",
+            "x-api-key": self.api_key,
+
+        }
+
+        response = requests.request("GET", url, data=payload, headers=headers)
+
+        print(response.text)
 
         url = "https://dce-frontoffice.imggaming.com/api/v1/init"
 
@@ -74,7 +95,7 @@ class UFC_API:
             "accept": "application/json, text/plain, */*",
             "accept-language": "ru-RU",
             "app": "dice",
-            "authorization": f"Bearer {self.auth_key}",
+            "authorization": f"Bearer {self.mixed_auth_token}",
             "content-type": "application/json",
             "origin": "https://ufcfightpass.com",
             "priority": "u=1, i",
