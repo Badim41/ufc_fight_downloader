@@ -9,8 +9,7 @@ pip install requests tqdm
 
 # Использование
 ```python
-# ключ из заголовка: 'authorization: Mixed <AUTH_KEY>' в запросе https://dce-frontoffice.imggaming.com/api/v1/init
-ufc_api = UFC_API("AUTH_KEY") 
+ufc_api = UFC_API(login="ufc_login", password="ufc_password")
 video_url = # "https://ufcfightpass.com/video/..."
 video_path = ufc_api.download_video(video_url)
 
