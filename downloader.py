@@ -10,14 +10,77 @@ download_path = "downloaded"
 
 
 class UFC_API:
-    def __init__(self, mixed_auth_token):
-        self.app_var = "6.7.1.1cf11b9"
-        self.api_key = self._get_api_key()
-        self.mixed_auth_token = mixed_auth_token
-        self.auth_key = self._get_auth_key()
+    def __init__(self, login, password, create_new=False, proxies=None):
+        self.login = login
+        self.password = password
+        self.proxies = proxies
+        self.x_app_var = "6.7.1.4049534"
+        self.x_api_key = self._get_api_key()
+
+        self.auth_file = "~/.ufc_auth/ufc_auth.txt"
+        if os.path.exists(self.auth_file) and not create_new:
+            with open(self.auth_file, "r") as reader:
+                self.mixed_auth_token = reader.read()
+        else:
+            self.mixed_auth_token = self._get_mixed_auth_token()
+            # print("mixed_auth_token from login:", self.mixed_auth_token)
+            os.makedirs(os.path.dirname(self.auth_file), exist_ok=True)
+            with open(self.auth_file, "w") as writer:
+                writer.write(self.mixed_auth_token)
+
+        self.auth_key = self._get_auth_key(self.mixed_auth_token)
+        # if not self.auth_key:
+        #     print("No auth key!")
+        # else:
+        #     print(f"auth key: {self.auth_key}")
+
+    def _get_mixed_auth_token(self):
+        url = "https://dce-frontoffice.imggaming.com/api/v2/login"
+
+        payload = {
+            "id": self.login,
+            "secret": self.password
+        }
+
+        headers = {
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "ru-RU",
+            "authorization": f"Bearer {self._get_auth_key(None)}",
+            "app": "dice",
+            "content-type": "application/json",
+            "origin": "https://ufcfightpass.com",
+            "priority": "u=1, i",
+            "realm": "dce.ufc",
+            "referer": "https://ufcfightpass.com/",
+            "sec-ch-ua-mobile": "?0",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 YaBrowser/24.7.0.0 Safari/537.36",
+            "x-api-key": self.x_api_key,
+            "x-app-var": self.x_app_var
+        }
+
+        # print("headers", headers)
+
+        response = requests.request("POST", url, json=payload, headers=headers, proxies=self.proxies)
+
+        response_json = response.json()
+
+        messages = response_json.get('messages')
+
+        if messages:
+            if messages[0] == "badLocation":
+                raise Exception("Неверная локация для UFC! Используйте прокси")
+            else:
+                raise Exception(f"Неуспешная авторизация в UFC. Сообщения: {messages}")
+
+        response.raise_for_status()
+
+        return response.json()['authorisationToken']
 
     def _get_api_key(self):
-        response = requests.request("GET", f"https://ufcfightpass.com/code/{self.app_var}/js/app.js", data="")
+        response = requests.request("GET", f"https://ufcfightpass.com/code/{self.x_app_var}/js/app.js", data="", proxies=self.proxies)
 
         # print(response.text)
         html_text = response.text  # '...{ENV_CONF:{env:"PROD", "otherKey": "value", "nestedKey": {"innerKey": "innerValue"}}}...'
@@ -33,26 +96,28 @@ class UFC_API:
         else:
             print('API_KEY не найден')
 
-    def _get_auth_key(self):
+    def _get_auth_key(self, mixed_auth_token):
         url = "https://dce-frontoffice.imggaming.com/api/v2/realm-settings/domain/ufcfightpass.com"
 
         payload = ""
         headers = {
             "Realm": "dce.ufc",
-            "x-app-var": "6.7.1.cdc7704",
             "Accept-Language": "ru-RU",
             "sec-ch-ua-mobile": "?0",
-            "Authorization": f"Bearer {self.mixed_auth_token}",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 YaBrowser/24.7.0.0 Safari/537.36",
             "Content-Type": "application/json",
             "Accept": "application/json, text/plain, */*",
             "Referer": "https://ufcfightpass.com/",
             "app": "dice",
-            "x-api-key": self.api_key,
+            "x-app-var": self.x_app_var,
+            "x-api-key": self.x_api_key,
 
         }
 
-        response = requests.request("GET", url, data=payload, headers=headers)
+        if mixed_auth_token:
+            headers["Authorization"] = f"Bearer {mixed_auth_token}"
+
+        response = requests.request("GET", url, data=payload, headers=headers, proxies=self.proxies)
 
         print(response.text)
 
@@ -67,7 +132,6 @@ class UFC_API:
             "accept": "application/json, text/plain, */*",
             "accept-language": "ru",
             "app": "dice",
-            "authorization": f"Mixed {self.mixed_auth_token}",
             "content-type": "application/json",
             "origin": "https://ufcfightpass.com",
             "priority": "u=1, i",
@@ -77,11 +141,14 @@ class UFC_API:
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "cross-site",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 YaBrowser/24.6.0.0 Safari/537.36",
-            "x-api-key": self.api_key,
-            "x-app-var": self.app_var
+            "x-api-key": self.x_api_key,
+            "x-app-var": self.x_app_var
         }
 
-        response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
+        if mixed_auth_token:
+            headers["Authorization"] = f"Mixed {mixed_auth_token}"
+
+        response = requests.request("GET", url, data=payload, headers=headers, params=querystring, proxies=self.proxies)
 
         return response.json()['authentication']['authorisationToken']
 
@@ -104,11 +171,11 @@ class UFC_API:
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "cross-site",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 YaBrowser/24.6.0.0 Safari/537.36",
-            "x-api-key": self.api_key,
-            "x-app-var": self.app_var
+            "x-api-key": self.x_api_key,
+            "x-app-var": self.x_app_var
         }
 
-        response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
+        response = requests.request("GET", url, data=payload, headers=headers, params=querystring, proxies=self.proxies)
 
         return response.json()
 
@@ -124,11 +191,11 @@ class UFC_API:
 
     def _get_media_urls(self, video_info):
         player_url_callback = video_info['playerUrlCallback']
-        response = requests.get(player_url_callback)
+        response = requests.get(player_url_callback, proxies=self.proxies)
         media_master_url = response.json()['hls'][0]['url']
         original_url = media_master_url[:media_master_url.find("master")]
 
-        response = requests.get(media_master_url)
+        response = requests.get(media_master_url, proxies=self.proxies)
         # print(response.text)
 
         video_pattern = re.compile(r'video/([^\s"]+)')
@@ -198,12 +265,18 @@ class UFC_API:
             os.mkdir(download_path)
 
         if not "https://ufcfightpass.com/video/" in url:
-            raise Exception("Ссылка должна в формате https://ufcfightpass.com/video/<ID>")
+            raise Exception("Ссылка должна быть в формате https://ufcfightpass.com/video/<ID>")
 
         video_id = url[url.rfind("/") + 1:]
+
+        if not video_id.isdigit():
+            raise Exception(f"\"{video_id}\" - должно быть числом")  # проверка на число
+
         print("video_id", video_id)
 
         video_info = self._get_video_info(video_id=video_id)
+
+        print("video_info", video_info)
 
         audio_parts_url, video_parts_url = self._get_media_urls(video_info)
 
@@ -232,3 +305,7 @@ class UFC_API:
             os.remove(file)
 
         return output_path
+
+# пустой get auth
+# из него ключ в login
+# ключ из login в get video info
